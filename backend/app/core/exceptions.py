@@ -48,9 +48,10 @@ class UnauthorizedError(AppException):
     def __init__(
         self,
         message: str = "Authentication is required.",
+        code: str = "UNAUTHORIZED",
     ) -> None:
         super().__init__(
-            code="UNAUTHORIZED",
+            code=code,
             message=message,
             status_code=401,
         )
