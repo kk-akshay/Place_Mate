@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
 from app.core.config import settings
+from app.core.exception_handlers import register_exception_handlers
 from app.db.session import close_database
 
 
@@ -22,6 +23,9 @@ app = FastAPI(
     description="Backend API for the AI Placement Preparation Platform.",
     lifespan=lifespan,
 )
+
+
+register_exception_handlers(app)
 
 
 app.add_middleware(

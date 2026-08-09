@@ -1,22 +1,40 @@
-import { SystemStatus } from "@/components/system-status";
+import type {
+  ReactNode,
+} from "react";
+
+import {
+  Database,
+  Monitor,
+  Server,
+} from "lucide-react";
+
+import {
+  SystemStatus,
+} from "@/components/system-status";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-zinc-50">
+    <main className="min-h-screen bg-background">
       <div className="mx-auto flex min-h-screen max-w-5xl items-center px-6 py-16">
         <div className="w-full">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-zinc-500">
-            AI Placement Preparation Platform
+          <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            Place-Mate
           </p>
 
-          <h1 className="max-w-3xl text-4xl font-bold tracking-tight text-zinc-950 sm:text-5xl">
-            Production foundation is running.
+          <h1 className="max-w-3xl text-4xl font-bold tracking-tight sm:text-5xl">
+            Application foundation is running.
           </h1>
 
-          <p className="mt-5 max-w-2xl text-base leading-7 text-zinc-600 sm:text-lg">
-            The frontend now communicates with the
-            FastAPI backend, and the backend verifies
+          <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
+            The frontend communicates with
+            FastAPI, and the backend verifies
             connectivity with PostgreSQL.
           </p>
 
@@ -26,18 +44,36 @@ export default function Home() {
 
           <div className="mt-10 grid max-w-2xl gap-4 sm:grid-cols-3">
             <ServiceCard
+              icon={
+                <Monitor
+                  className="size-5"
+                  aria-hidden="true"
+                />
+              }
               name="Frontend"
               technology="Next.js"
               port="3000"
             />
 
             <ServiceCard
+              icon={
+                <Server
+                  className="size-5"
+                  aria-hidden="true"
+                />
+              }
               name="Backend"
               technology="FastAPI"
               port="8000"
             />
 
             <ServiceCard
+              icon={
+                <Database
+                  className="size-5"
+                  aria-hidden="true"
+                />
+              }
               name="Database"
               technology="PostgreSQL"
               port="5432"
@@ -51,6 +87,7 @@ export default function Home() {
 
 
 type ServiceCardProps = {
+  icon: ReactNode;
   name: string;
   technology: string;
   port: string;
@@ -58,23 +95,32 @@ type ServiceCardProps = {
 
 
 function ServiceCard({
+  icon,
   name,
   technology,
   port,
 }: ServiceCardProps) {
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-      <p className="text-sm font-semibold text-zinc-950">
-        {name}
-      </p>
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex size-9 items-center justify-center rounded-md bg-muted text-muted-foreground">
+          {icon}
+        </div>
 
-      <p className="mt-1 text-sm text-zinc-500">
-        {technology}
-      </p>
+        <CardTitle className="text-base">
+          {name}
+        </CardTitle>
+      </CardHeader>
 
-      <p className="mt-3 font-mono text-xs text-zinc-400">
-        :{port}
-      </p>
-    </div>
+      <CardContent>
+        <p className="text-sm text-muted-foreground">
+          {technology}
+        </p>
+
+        <p className="mt-3 font-mono text-xs text-muted-foreground">
+          :{port}
+        </p>
+      </CardContent>
+    </Card>
   );
 }

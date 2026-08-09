@@ -1,11 +1,30 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import {
+  CheckCircle2,
+} from "lucide-react";
+import {
+  useEffect,
+  useState,
+} from "react";
 
-type ConnectionState =
-  | "loading"
-  | "ready"
-  | "error";
+import {
+  ErrorState,
+} from "@/components/shared/error-state";
+import {
+  LoadingState,
+} from "@/components/shared/loading-state";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  ApiRequestError,
+  apiFetch,
+} from "@/lib/api";
+
 
 type ReadyResponse = {
   status: string;
@@ -14,147 +33,174 @@ type ReadyResponse = {
   };
 };
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL;
+
+type SystemState =
+  | {
+      status: "loading";
+    }
+  | {
+      status: "ready";
+      message: string;
+    }
+  | {
+      status: "error";
+      message: string;
+    };
+
+
+async function fetchSystemStatus(
+  signal?: AbortSignal,
+): Promise<string> {
+  const data =
+    await apiFetch<ReadyResponse>(
+      "/health/ready",
+      {
+        method: "GET",
+        cache: "no-store",
+        signal,
+      },
+    );
+
+  if (
+    data.status !== "ok" ||
+    data.checks.database !== "ok"
+  ) {
+    throw new ApiRequestError({
+      status: 503,
+      code: "SYSTEM_NOT_READY",
+      message:
+        "One or more application services are unavailable.",
+    });
+  }
+
+  return (
+    "Frontend, backend, and database are connected."
+  );
+}
+
+
+function getErrorMessage(
+  error: unknown,
+): string {
+  if (error instanceof ApiRequestError) {
+    return error.message;
+  }
+
+  return (
+    "The application backend is not reachable."
+  );
+}
 
 
 export function SystemStatus() {
-  const [connectionState, setConnectionState] =
-    useState<ConnectionState>("loading");
+  const [state, setState] =
+    useState<SystemState>({
+      status: "loading",
+    });
 
-  const [message, setMessage] = useState(
-    "Checking application services...",
-  );
-
-
-  const checkSystem = useCallback(async () => {
-    if (!API_BASE_URL) {
-      setConnectionState("error");
-
-      setMessage(
-        "Frontend API configuration is missing.",
-      );
-
-      return;
-    }
-
-    setConnectionState("loading");
-
-    setMessage(
-      "Checking application services...",
-    );
-
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/health/ready`,
-        {
-          method: "GET",
-          cache: "no-store",
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          `Backend returned HTTP ${response.status}`,
-        );
-      }
-
-      const data =
-        (await response.json()) as ReadyResponse;
-
-      if (
-        data.status !== "ok" ||
-        data.checks.database !== "ok"
-      ) {
-        throw new Error(
-          "One or more services are unavailable.",
-        );
-      }
-
-      setConnectionState("ready");
-
-      setMessage(
-        "Frontend, backend, and database are connected.",
-      );
-    } catch {
-      setConnectionState("error");
-
-      setMessage(
-        "The application backend is not reachable.",
-      );
-    }
-  }, []);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void checkSystem();
-    }, 0);
+    const controller =
+      new AbortController();
+
+    void fetchSystemStatus(
+      controller.signal,
+    )
+      .then((message) => {
+        if (!controller.signal.aborted) {
+          setState({
+            status: "ready",
+            message,
+          });
+        }
+      })
+      .catch((error: unknown) => {
+        if (
+          error instanceof Error &&
+          error.name === "AbortError"
+        ) {
+          return;
+        }
+
+        if (!controller.signal.aborted) {
+          setState({
+            status: "error",
+            message:
+              getErrorMessage(error),
+          });
+        }
+      });
 
     return () => {
-      window.clearTimeout(timer);
+      controller.abort();
     };
-  }, [checkSystem]);
+  }, []);
 
 
-  if (connectionState === "loading") {
+  async function handleRetry() {
+    setState({
+      status: "loading",
+    });
+
+    try {
+      const message =
+        await fetchSystemStatus();
+
+      setState({
+        status: "ready",
+        message,
+      });
+    } catch (error) {
+      setState({
+        status: "error",
+        message:
+          getErrorMessage(error),
+      });
+    }
+  }
+
+
+  if (state.status === "loading") {
     return (
-      <div
-        className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm"
-        role="status"
-      >
-        <div className="mb-4 h-3 w-24 animate-pulse rounded bg-zinc-200" />
-
-        <div className="h-4 w-64 animate-pulse rounded bg-zinc-200" />
-      </div>
+      <LoadingState
+        title="Checking system"
+        description="Checking application services."
+      />
     );
   }
 
 
-  if (connectionState === "error") {
+  if (state.status === "error") {
     return (
-      <div
-        className="rounded-2xl border border-red-200 bg-red-50 p-6"
-        role="alert"
-      >
-        <p className="font-semibold text-red-900">
-          System unavailable
-        </p>
-
-        <p className="mt-2 text-sm text-red-700">
-          {message}
-        </p>
-
-        <button
-          type="button"
-          onClick={() => void checkSystem()}
-          className="mt-5 rounded-lg bg-red-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-red-700 focus:ring-offset-2"
-        >
-          Try again
-        </button>
-      </div>
+      <ErrorState
+        title="System unavailable"
+        message={state.message}
+        onRetry={() => {
+          void handleRetry();
+        }}
+      />
     );
   }
 
 
   return (
-    <div
-      className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6"
-      role="status"
-    >
-      <div className="flex items-center gap-3">
-        <span
-          className="h-3 w-3 rounded-full bg-emerald-500"
-          aria-hidden="true"
-        />
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <CheckCircle2
+            className="size-5"
+            aria-hidden="true"
+          />
 
-        <p className="font-semibold text-emerald-950">
           System ready
-        </p>
-      </div>
+        </CardTitle>
+      </CardHeader>
 
-      <p className="mt-2 text-sm text-emerald-800">
-        {message}
-      </p>
-    </div>
+      <CardContent>
+        <p className="text-sm text-muted-foreground">
+          {state.message}
+        </p>
+      </CardContent>
+    </Card>
   );
 }
