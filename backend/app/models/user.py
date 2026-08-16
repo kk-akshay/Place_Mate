@@ -1,12 +1,19 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from app.db.base import (
+    Base,
+    TimestampMixin,
+    UUIDPrimaryKeyMixin,
+)
 
 if TYPE_CHECKING:
     from app.models.auth_session import AuthSession
+    from app.models.student_profile import StudentProfile
 
 
 class User(
@@ -45,8 +52,15 @@ class User(
         nullable=False,
     )
 
-    sessions: Mapped[list["AuthSession"]] = relationship(
+    sessions: Mapped[list[AuthSession]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
         passive_deletes=True,
+    )
+
+    profile: Mapped[StudentProfile | None] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        uselist=False,
     )

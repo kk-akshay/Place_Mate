@@ -1,43 +1,80 @@
 "use client";
 
-import type { FormEvent } from "react";
+import type {
+  FormEvent,
+} from "react";
 import {
   useEffect,
+  useRef,
   useState,
 } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import {
+  useRouter,
+} from "next/navigation";
 
-import { AuthShell } from "@/components/auth/auth-shell";
+import {
+  AuthShell,
+} from "@/components/auth/auth-shell";
 import {
   Alert,
   AlertDescription,
 } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useAuth } from "@/features/auth/auth-provider";
-import { ApiRequestError } from "@/lib/api";
+import {
+  Button,
+} from "@/components/ui/button";
+import {
+  Input,
+} from "@/components/ui/input";
+import {
+  Label,
+} from "@/components/ui/label";
+import {
+  useAuth,
+} from "@/features/auth/auth-provider";
+import {
+  ApiRequestError,
+} from "@/lib/api";
 
 
 export default function RegisterPage() {
-  const router = useRouter();
+  const router =
+    useRouter();
 
   const {
     register,
     status,
   } = useAuth();
 
-  const [error, setError] =
-    useState<string | null>(null);
 
-  const [submitting, setSubmitting] =
-    useState(false);
+  const registrationInProgress =
+    useRef(false);
+
+
+  const [
+    error,
+    setError,
+  ] = useState<
+    string | null
+  >(null);
+
+
+  const [
+    submitting,
+    setSubmitting,
+  ] = useState(false);
 
 
   useEffect(() => {
-    if (status === "authenticated") {
-      router.replace("/dashboard");
+    if (
+      status
+        === "authenticated" &&
+      !registrationInProgress
+        .current
+    ) {
+      router.replace(
+        "/dashboard",
+      );
     }
   }, [
     status,
@@ -46,39 +83,78 @@ export default function RegisterPage() {
 
 
   async function handleSubmit(
-    event: FormEvent<HTMLFormElement>,
+    event:
+      FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
 
-    setError(null);
-    setSubmitting(true);
 
-    const form = new FormData(
-      event.currentTarget,
+    setError(null);
+
+    setSubmitting(
+      true,
     );
+
+
+    registrationInProgress
+      .current =
+      true;
+
+
+    const form =
+      new FormData(
+        event.currentTarget,
+      );
+
 
     try {
       await register({
-        fullName: String(
-          form.get("fullName") ?? "",
-        ),
-        email: String(
-          form.get("email") ?? "",
-        ),
-        password: String(
-          form.get("password") ?? "",
-        ),
+        fullName:
+          String(
+            form.get(
+              "fullName",
+            ) ?? "",
+          ),
+
+        email:
+          String(
+            form.get(
+              "email",
+            ) ?? "",
+          ),
+
+        password:
+          String(
+            form.get(
+              "password",
+            ) ?? "",
+          ),
       });
 
-      router.replace("/dashboard");
-    } catch (error) {
-      setError(
-        error instanceof ApiRequestError
-          ? error.message
-          : "Unable to create your account.",
+
+      router.replace(
+        "/onboarding",
       );
+
+    } catch (error) {
+      registrationInProgress
+        .current =
+        false;
+
+
+      setError(
+        error
+          instanceof ApiRequestError
+          ? error.message
+          : (
+              "Unable to create your account."
+            ),
+      );
+
     } finally {
-      setSubmitting(false);
+      setSubmitting(
+        false,
+      );
     }
   }
 
@@ -90,7 +166,9 @@ export default function RegisterPage() {
       description="Start building a focused and personalized placement preparation journey."
       footer={
         <p>
-          Already have an account?{" "}
+          Already have
+          an account?{" "}
+
           <Link
             href="/login"
             className="font-semibold text-primary underline-offset-4 transition-colors hover:underline"
@@ -101,16 +179,21 @@ export default function RegisterPage() {
       }
     >
       <form
-        onSubmit={handleSubmit}
+        onSubmit={
+          handleSubmit
+        }
         className="space-y-5"
       >
         {error ? (
-          <Alert variant="destructive">
+          <Alert
+            variant="destructive"
+          >
             <AlertDescription>
               {error}
             </AlertDescription>
           </Alert>
         ) : null}
+
 
         <div className="space-y-2">
           <Label htmlFor="fullName">
@@ -121,13 +204,18 @@ export default function RegisterPage() {
             id="fullName"
             name="fullName"
             autoComplete="name"
-            minLength={2}
-            maxLength={120}
+            minLength={
+              2
+            }
+            maxLength={
+              120
+            }
             required
             placeholder="Your full name"
-            className="h-11 rounded-xl bg-background transition-shadow focus-visible:ring-2"
+            className="h-11 rounded-xl"
           />
         </div>
+
 
         <div className="space-y-2">
           <Label htmlFor="email">
@@ -141,9 +229,10 @@ export default function RegisterPage() {
             autoComplete="email"
             required
             placeholder="you@example.com"
-            className="h-11 rounded-xl bg-background transition-shadow focus-visible:ring-2"
+            className="h-11 rounded-xl"
           />
         </div>
+
 
         <div className="space-y-2">
           <Label htmlFor="password">
@@ -155,22 +244,25 @@ export default function RegisterPage() {
             name="password"
             type="password"
             autoComplete="new-password"
-            minLength={8}
-            maxLength={128}
+            minLength={
+              8
+            }
+            maxLength={
+              128
+            }
             required
             placeholder="Minimum 8 characters"
-            className="h-11 rounded-xl bg-background transition-shadow focus-visible:ring-2"
+            className="h-11 rounded-xl"
           />
-
-          <p className="text-xs leading-5 text-muted-foreground">
-            Use at least 8 characters.
-          </p>
         </div>
+
 
         <Button
           type="submit"
-          className="h-11 w-full rounded-xl shadow-lg shadow-primary/15 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/20"
-          disabled={submitting}
+          disabled={
+            submitting
+          }
+          className="h-11 w-full rounded-xl shadow-lg shadow-primary/15"
         >
           {submitting
             ? "Creating account..."

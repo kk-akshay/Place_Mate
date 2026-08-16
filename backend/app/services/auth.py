@@ -214,28 +214,6 @@ class AuthService:
                 ),
             )
 
-        new_refresh_token = (
-            create_refresh_token(
-                user_id=user.id,
-                session_id=auth_session.id,
-            )
-        )
-
-        auth_session.refresh_token_hash = (
-            hash_refresh_token(
-                new_refresh_token,
-            )
-        )
-
-        auth_session.expires_at = (
-            now
-            + timedelta(
-                days=(
-                    settings.refresh_token_expire_days
-                ),
-            )
-        )
-
         access_token = (
             create_access_token(
                 user_id=user.id,
@@ -243,12 +221,10 @@ class AuthService:
             )
         )
 
-        await self.session.commit()
-
         return AuthResult(
             user=user,
             access_token=access_token,
-            refresh_token=new_refresh_token,
+            refresh_token=refresh_token,
         )
 
 
@@ -286,13 +262,14 @@ class AuthService:
         ):
             return
 
-        auth_session.revoked_at = (
-            datetime.now(
-                timezone.utc,
+        if auth_session.revoked_at is None:
+            auth_session.revoked_at = (
+                datetime.now(
+                    timezone.utc,
+                )
             )
-        )
 
-        await self.session.commit()
+            await self.session.commit()
 
 
     async def _create_login_session(
