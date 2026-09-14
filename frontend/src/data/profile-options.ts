@@ -28,6 +28,7 @@ export const INSTITUTION_OPTIONS = [
   "SRM Institute of Science and Technology",
   "Savitribai Phule Pune University",
   "Thapar Institute of Engineering and Technology",
+  "College of Engineering Thalassery",
   "University of Calicut",
   "University of Delhi",
   "University of Kerala",
