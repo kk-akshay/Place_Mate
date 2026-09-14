@@ -9,7 +9,6 @@ from app.models.aptitude import (
     AptitudeQuestion,
 )
 
-
 QUESTIONS = [
     {
         "category": "quantitative",

@@ -6,6 +6,13 @@ from app.models.aptitude import (
 from app.models.auth_session import (
     AuthSession,
 )
+from app.models.coding import (
+    CodingQuestion,
+    CodingTestCase,
+)
+from app.models.coding_submission import (
+    CodingSubmission,
+)
 from app.models.preparation_activity import (
     PreparationActivity,
 )
@@ -15,10 +22,14 @@ from app.models.student_profile import (
 from app.models.user import User
 
 __all__ = [
+    
     "AptitudeAnswer",
     "AptitudeAttempt",
     "AptitudeQuestion",
     "AuthSession",
+    "CodingQuestion",
+    "CodingSubmission",
+    "CodingTestCase",
     "PreparationActivity",
     "StudentProfile",
     "User",

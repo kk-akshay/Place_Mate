@@ -5,6 +5,7 @@ from fastapi import (
 from app.api.routes import (
     aptitude,
     auth,
+    coding,
     health,
     preparation,
     profiles,
@@ -38,4 +39,8 @@ api_router.include_router(
 
 api_router.include_router(
     preparation.router,
+)
+
+api_router.include_router(
+    coding.router,
 )

@@ -66,22 +66,22 @@ const modules = [
     available:
       true,
   },
-  {
-    title:
-      "Coding Practice",
+ {
+  title:
+    "Coding Practice",
 
-    description:
-      "Solve placement-focused Python coding problems.",
+  description:
+    "Solve placement-focused Python coding problems.",
 
-    icon:
-      Code2,
+  icon:
+    Code2,
 
-    href:
-      null,
+  href:
+    "/coding",
 
-    available:
-      false,
-  },
+  available:
+    true,
+},
   {
     title:
       "Technical Interview",
@@ -440,7 +440,7 @@ export default function DashboardPage() {
       </header>
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-        <section className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-violet-500/5 to-cyan-400/10 p-6 sm:p-8 lg:p-10">
+        <section className="relative overflow-hidden rounded-3xl border border-primary/20 bg-linear-to-br from-primary/10 via-violet-500/5 to-cyan-400/10 p-6 sm:p-8 lg:p-10">
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary">
             Your workspace
           </p>
