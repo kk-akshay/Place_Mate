@@ -1,5 +1,4 @@
 export const INSTITUTION_OPTIONS = [
-  [
   "Amal Jyothi College of Engineering",
   "Amrita Vishwa Vidyapeetham",
   "Anna University",
@@ -152,10 +151,8 @@ export const INSTITUTION_OPTIONS = [
   "St. Thomas College of Engineering & Technology, Chengannur",
   "UKF College of Engineering & Technology",
   "Viswajyothi College of Engineering & Technology",
-  "Vimal Jyothi Engineering College"
-],
+  "Vimal Jyothi Engineering College",
 ] as const;
-
 
 export const DEGREE_OPTIONS = [
   "B.Tech",
@@ -175,7 +172,6 @@ export const DEGREE_OPTIONS = [
   "Diploma",
   "PhD",
 ] as const;
-
 
 export const BRANCH_OPTIONS = [
   "Computer Science and Engineering",
@@ -202,7 +198,6 @@ export const BRANCH_OPTIONS = [
   "Physics",
   "Chemistry",
 ] as const;
-
 
 export const TARGET_ROLE_OPTIONS = [
   "Software Engineer",
@@ -238,7 +233,6 @@ export const TARGET_ROLE_OPTIONS = [
   "Graduate Engineer Trainee",
 ] as const;
 
-
 export const COMPANY_OPTIONS = [
   "Accenture",
   "Adobe",
@@ -269,7 +263,6 @@ export const COMPANY_OPTIONS = [
   "Wipro",
   "Zoho",
 ] as const;
-
 
 export const SKILL_OPTIONS = [
   "Python",
@@ -312,7 +305,6 @@ export const SKILL_OPTIONS = [
   "Teamwork",
 ] as const;
 
-
 export const STRENGTH_OPTIONS = [
   "Problem solving",
   "Logical reasoning",
@@ -330,7 +322,6 @@ export const STRENGTH_OPTIONS = [
   "Analytical thinking",
   "Creativity",
 ] as const;
-
 
 export const WEAK_AREA_OPTIONS = [
   "Quantitative aptitude",
@@ -351,7 +342,6 @@ export const WEAK_AREA_OPTIONS = [
   "Time management",
 ] as const;
 
-
 export const PREPARATION_GOAL_OPTIONS = [
   "Improve aptitude accuracy",
   "Improve aptitude speed",
@@ -369,7 +359,6 @@ export const PREPARATION_GOAL_OPTIONS = [
   "Build stronger technical fundamentals",
 ] as const;
 
-
 export const GRADUATION_YEAR_OPTIONS =
   Array.from(
     {
@@ -378,7 +367,6 @@ export const GRADUATION_YEAR_OPTIONS =
     (_, index) =>
       String(2000 + index),
   );
-
 
 export const WEEKLY_HOUR_OPTIONS = [
   "3",
