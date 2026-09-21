@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from sqlalchemy import (
+    distinct,
     func,
     select,
 )
@@ -13,6 +14,9 @@ from sqlalchemy.orm import (
 
 from app.models.coding import (
     CodingQuestion,
+)
+from app.models.coding_submission import (
+    CodingSubmission,
 )
 
 
@@ -119,4 +123,110 @@ class CodingRepository:
             .scalars()
             .unique()
             .one_or_none()
+        )
+
+    async def add_submission(
+        self,
+        submission: CodingSubmission,
+    ) -> None:
+        self.session.add(
+            submission
+        )
+
+        await self.session.flush()
+
+    async def get_progress_counts(
+        self,
+        user_id: UUID,
+    ) -> tuple[
+        int,
+        int,
+        int,
+        int,
+    ]:
+        total_result = (
+            await self.session.execute(
+                select(
+                    func.count(
+                        CodingQuestion.id,
+                    )
+                ).where(
+                    CodingQuestion
+                    .is_active
+                    .is_(True),
+                )
+            )
+        )
+
+        total_questions = int(
+            total_result.scalar_one()
+        )
+
+        submission_result = (
+            await self.session.execute(
+                select(
+                    func.count(
+                        CodingSubmission.id,
+                    )
+                ).where(
+                    CodingSubmission.user_id
+                    == user_id,
+                )
+            )
+        )
+
+        submissions = int(
+            submission_result
+            .scalar_one()
+        )
+
+        attempted_result = (
+            await self.session.execute(
+                select(
+                    func.count(
+                        distinct(
+                            CodingSubmission
+                            .question_id
+                        )
+                    )
+                ).where(
+                    CodingSubmission.user_id
+                    == user_id,
+                )
+            )
+        )
+
+        attempted = int(
+            attempted_result
+            .scalar_one()
+        )
+
+        solved_result = (
+            await self.session.execute(
+                select(
+                    func.count(
+                        distinct(
+                            CodingSubmission
+                            .question_id
+                        )
+                    )
+                ).where(
+                    CodingSubmission.user_id
+                    == user_id,
+                    CodingSubmission
+                    .all_passed
+                    .is_(True),
+                )
+            )
+        )
+
+        solved = int(
+            solved_result.scalar_one()
+        )
+
+        return (
+            total_questions,
+            attempted,
+            solved,
+            submissions,
         )
