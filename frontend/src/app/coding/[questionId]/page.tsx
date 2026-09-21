@@ -644,33 +644,32 @@ export default function CodingProblemPage() {
                     </Button>
 
                     <Button
-                      type="button"
-                      className="rounded-xl"
-                      disabled
-                      onClick={() => {
-                        void executeCode(
-                          "submit",
-                        );
-                      }}
-                    >
-                      {
-                        executing
-                          === "submit"
-                          ? (
-                              <Loader2 className="size-4 animate-spin" />
-                            )
-                          : (
-                              <Send className="size-4" />
-                            )
-                      }
+  type="button"
+  className="rounded-xl"
+  disabled={
+    executing !== null
+    || !code.trim()
+  }
+  onClick={() => {
+    void executeCode("submit");
+  }}
+>
+  {
+    executing === "submit"
+      ? (
+          <Loader2 className="size-4 animate-spin" />
+        )
+      : (
+          <Send className="size-4" />
+        )
+  }
 
-                      {
-                        executing
-                          === "submit"
-                          ? "Submitting..."
-                          : "Submit"
-                      }
-                    </Button>
+  {
+    executing === "submit"
+      ? "Submitting..."
+      : "Submit"
+  }
+</Button>
                   </div>
                 </div>
               </div>
