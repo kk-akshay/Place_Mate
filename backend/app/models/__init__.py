@@ -1,4 +1,4 @@
-from app.models.aptitude import (
+﻿from app.models.aptitude import (
     AptitudeAnswer,
     AptitudeAttempt,
     AptitudeQuestion,
@@ -16,6 +16,9 @@ from app.models.coding_submission import (
 from app.models.preparation_activity import (
     PreparationActivity,
 )
+from app.models.resume_analysis import (
+    ResumeAnalysis,
+)
 from app.models.student_profile import (
     StudentProfile,
 )
@@ -31,6 +34,7 @@ __all__ = [
     "CodingSubmission",
     "CodingTestCase",
     "PreparationActivity",
+    "ResumeAnalysis",
     "StudentProfile",
     "User",
 ]

@@ -1,4 +1,4 @@
-from fastapi import (
+﻿from fastapi import (
     APIRouter,
 )
 
@@ -9,6 +9,7 @@ from app.api.routes import (
     health,
     preparation,
     profiles,
+    resume,
     users,
 )
 
@@ -43,4 +44,8 @@ api_router.include_router(
 
 api_router.include_router(
     coding.router,
+)
+
+api_router.include_router(
+    resume.router,
 )

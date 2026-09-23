@@ -1,4 +1,4 @@
-from typing import Any
+﻿from typing import Any
 
 
 class AppException(Exception):
@@ -66,4 +66,30 @@ class ForbiddenError(AppException):
             code="FORBIDDEN",
             message=message,
             status_code=403,
+        )
+
+
+class InvalidRequestError(AppException):
+    def __init__(
+        self,
+        message: str,
+        code: str = "INVALID_REQUEST",
+    ) -> None:
+        super().__init__(
+            code=code,
+            message=message,
+            status_code=400,
+        )
+
+
+class ServiceUnavailableError(AppException):
+    def __init__(
+        self,
+        message: str = "An upstream service is temporarily unavailable.",
+        code: str = "SERVICE_UNAVAILABLE",
+    ) -> None:
+        super().__init__(
+            code=code,
+            message=message,
+            status_code=503,
         )

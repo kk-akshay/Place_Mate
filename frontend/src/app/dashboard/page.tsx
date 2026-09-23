@@ -99,21 +99,19 @@ const modules = [
       false,
   },
   {
-    title:
-      "Resume Analysis",
+  title: "Resume Analysis",
+  description:
+    "Upload and improve your resume for placements.",
 
-    description:
-      "Upload and improve your resume for placements.",
+  icon:
+    FileText,
 
-    icon:
-      FileText,
+  href:
+    "/resume",
 
-    href:
-      null,
-
-    available:
-      false,
-  },
+  available:
+    true,
+},
   {
     title:
       "Progress",

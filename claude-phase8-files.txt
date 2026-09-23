@@ -1,0 +1,1535 @@
+
+
+============================================================
+FILE: backend\app\core\config.py
+============================================================
+
+from functools import lru_cache
+from typing import Literal
+
+from pydantic_settings import (
+    BaseSettings,
+    SettingsConfigDict,
+)
+
+
+class Settings(BaseSettings):
+    app_name: str = "AI Placement Preparation Platform API"
+
+    jwt_secret_key: str
+
+    jwt_algorithm: str = "HS256"
+
+    jwt_issuer: str = "place-mate-api"
+
+    jwt_audience: str = "place-mate-web"
+
+    access_token_expire_minutes: int = 15
+
+    refresh_token_expire_days: int = 7
+
+    refresh_cookie_name: str = (
+        "place_mate_refresh_token"
+    )
+
+    refresh_cookie_secure: bool = False
+
+    refresh_cookie_samesite: Literal[
+        "lax",
+        "strict",
+        "none",
+    ] = "lax"
+
+    environment: Literal[
+        "development",
+        "test",
+        "production",
+    ] = "development"
+
+    api_v1_prefix: str = "/api/v1"
+
+    database_url: str
+
+    frontend_url: str = "http://localhost:3000"
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
+
+
+settings = get_settings()
+
+
+============================================================
+FILE: backend\app\db\session.py
+============================================================
+
+from collections.abc import AsyncGenerator
+
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+
+from app.core.config import settings
+
+engine: AsyncEngine = create_async_engine(
+    settings.database_url,
+    pool_pre_ping=True,
+)
+
+
+AsyncSessionLocal = async_sessionmaker(
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+)
+
+
+async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise
+
+
+async def close_database() -> None:
+    await engine.dispose()
+
+
+============================================================
+FILE: backend\.env.example
+============================================================
+
+APP_NAME=AI Placement Preparation Platform API
+ENVIRONMENT=development
+API_V1_PREFIX=/api/v1
+DATABASE_URL=postgresql+asyncpg://placement_app:change_me@localhost:5432/placement_platform
+FRONTEND_URL=http://localhost:3000
+JWT_SECRET_KEY=replace-with-a-secure-random-secret
+JWT_ALGORITHM=HS256
+JWT_ISSUER=place-mate-api
+JWT_AUDIENCE=place-mate-web
+
+ACCESS_TOKEN_EXPIRE_MINUTES=15
+REFRESH_TOKEN_EXPIRE_DAYS=7
+
+REFRESH_COOKIE_NAME=place_mate_refresh_token
+REFRESH_COOKIE_SECURE=false
+REFRESH_COOKIE_SAMESITE=lax
+
+
+============================================================
+FILE: frontend\src\lib\api.ts
+============================================================
+
+import type { ApiErrorResponse } from "@/types/api";
+
+
+
+type ApiRequestErrorOptions = {
+  status: number;
+  code: string;
+  message: string;
+  details?: unknown;
+};
+
+
+export class ApiRequestError extends Error {
+  readonly status: number;
+  readonly code: string;
+  readonly details?: unknown;
+
+
+  constructor({
+    status,
+    code,
+    message,
+    details,
+  }: ApiRequestErrorOptions) {
+    super(message);
+
+    this.name = "ApiRequestError";
+    this.status = status;
+    this.code = code;
+    this.details = details;
+  }
+}
+
+
+function buildApiUrl(path: string): string {
+  const apiBaseUrl =
+    process.env.NEXT_PUBLIC_API_BASE_URL;
+
+  if (!apiBaseUrl) {
+    throw new ApiRequestError({
+      status: 0,
+      code: "API_CONFIGURATION_ERROR",
+      message:
+        "Frontend API configuration is missing.",
+    });
+  }
+
+  const baseUrl =
+    apiBaseUrl.replace(/\/+$/, "");
+
+  const normalizedPath =
+    path.startsWith("/")
+      ? path
+      : `/${path}`;
+
+  return `${baseUrl}${normalizedPath}`;
+}
+
+
+function isApiErrorResponse(
+  value: unknown,
+): value is ApiErrorResponse {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    !("error" in value)
+  ) {
+    return false;
+  }
+
+  const error = (
+    value as {
+      error?: unknown;
+    }
+  ).error;
+
+  if (
+    typeof error !== "object" ||
+    error === null
+  ) {
+    return false;
+  }
+
+  const errorObject = error as {
+    code?: unknown;
+    message?: unknown;
+  };
+
+  return (
+    typeof errorObject.code === "string" &&
+    typeof errorObject.message === "string"
+  );
+}
+
+
+async function readApiError(
+  response: Response,
+): Promise<ApiErrorResponse | null> {
+  try {
+    const body: unknown =
+      await response.json();
+
+    if (isApiErrorResponse(body)) {
+      return body;
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+
+export async function apiFetch<T>(
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
+  const url = buildApiUrl(path);
+
+  const headers = new Headers(
+    init.headers,
+  );
+
+  if (!headers.has("Accept")) {
+    headers.set(
+      "Accept",
+      "application/json",
+    );
+  }
+
+  let response: Response;
+
+  try {
+    response = await fetch(url, {
+      ...init,
+      headers,
+      credentials:
+        init.credentials ?? "include",
+    });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.name === "AbortError"
+    ) {
+      throw error;
+    }
+
+    throw new ApiRequestError({
+      status: 0,
+      code: "NETWORK_ERROR",
+      message:
+        "Unable to reach the application server.",
+    });
+  }
+
+  if (!response.ok) {
+    const body =
+      await readApiError(response);
+
+    throw new ApiRequestError({
+      status: response.status,
+      code:
+        body?.error.code ??
+        "REQUEST_FAILED",
+      message:
+        body?.error.message ??
+        `Request failed with HTTP ${response.status}.`,
+      details: body?.error.details,
+    });
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  return (await response.json()) as T;
+}
+
+
+============================================================
+FILE: backend\app\ai\providers\factory.py
+============================================================
+
+[FILE NOT FOUND]
+
+
+============================================================
+FILE: backend\app\ai\providers\base.py
+============================================================
+
+[FILE NOT FOUND]
+
+
+============================================================
+FILE: backend\app\ai\providers\ollama.py
+============================================================
+
+[FILE NOT FOUND]
+
+
+============================================================
+FILE: backend\app\services\resume.py
+============================================================
+
+from io import BytesIO
+
+from pypdf import (
+    PdfReader,
+)
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+)
+
+from app.ai.prompts.resume import (
+    build_resume_prompts,
+)
+from app.ai.providers.factory import (
+    get_ai_provider,
+)
+from app.models.resume_analysis import (
+    ResumeAnalysis,
+)
+from app.models.user import User
+from app.repositories.resume import (
+    ResumeRepository,
+)
+from app.schemas.resume import (
+    ResumeAIResult,
+    ResumeAnalysisListRead,
+    ResumeAnalysisRead,
+)
+
+
+MAX_RESUME_BYTES = (
+    5 * 1024 * 1024
+)
+
+
+class ResumeService:
+    def __init__(
+        self,
+        session: AsyncSession,
+    ) -> None:
+        self.session = session
+
+        self.repository = (
+            ResumeRepository(
+                session
+            )
+        )
+
+        self.ai = (
+            get_ai_provider()
+        )
+
+    async def analyze(
+        self,
+        *,
+        user: User,
+        filename: str,
+        file_bytes: bytes,
+        target_role: str | None,
+    ) -> ResumeAnalysisRead:
+        if not filename.lower().endswith(
+            ".pdf"
+        ):
+            raise ValueError(
+                "Only PDF resumes "
+                "are supported."
+            )
+
+        if (
+            len(file_bytes)
+            > MAX_RESUME_BYTES
+        ):
+            raise ValueError(
+                "Resume PDF must be "
+                "5 MB or smaller."
+            )
+
+        resume_text = (
+            self._extract_pdf_text(
+                file_bytes
+            )
+        )
+
+        if (
+            len(
+                resume_text.strip()
+            )
+            < 100
+        ):
+            raise ValueError(
+                "The PDF does not contain "
+                "enough extractable text."
+            )
+
+        profile = (
+            await self.repository
+            .get_profile(
+                user.id
+            )
+        )
+
+        resolved_role = (
+            target_role.strip()
+            if (
+                target_role
+                and target_role
+                .strip()
+            )
+            else (
+                profile.target_roles[0]
+                if (
+                    profile
+                    and profile.target_roles
+                )
+                else (
+                    "Placement candidate"
+                )
+            )
+        )
+
+        (
+            system_prompt,
+            user_prompt,
+        ) = build_resume_prompts(
+            target_role=(
+                resolved_role
+            ),
+            resume_text=(
+                resume_text[:20_000]
+            ),
+        )
+
+        raw = await self.ai.generate_json(
+            system_prompt=(
+                system_prompt
+            ),
+            user_prompt=user_prompt,
+            schema=(
+                ResumeAIResult
+                .model_json_schema()
+            ),
+        )
+
+        ai_result = (
+            ResumeAIResult
+            .model_validate(
+                raw
+            )
+        )
+
+        analysis = ResumeAnalysis(
+            user_id=user.id,
+            original_filename=(
+                filename
+            ),
+            target_role=(
+                resolved_role
+            ),
+            overall_score=(
+                ai_result
+                .overall_score
+            ),
+            summary=(
+                ai_result.summary
+            ),
+            strengths=(
+                ai_result.strengths
+            ),
+            weaknesses=(
+                ai_result.weaknesses
+            ),
+            missing_keywords=(
+                ai_result
+                .missing_keywords
+            ),
+            suggestions=(
+                ai_result.suggestions
+            ),
+            improved_summary=(
+                ai_result
+                .improved_summary
+            ),
+        )
+
+        await self.repository.add_analysis(
+            analysis
+        )
+
+        await self.session.commit()
+
+        await self.session.refresh(
+            analysis
+        )
+
+        return self._build_read(
+            analysis
+        )
+
+    async def list_analyses(
+        self,
+        user: User,
+    ) -> ResumeAnalysisListRead:
+        analyses = (
+            await self.repository
+            .list_analyses(
+                user.id
+            )
+        )
+
+        return ResumeAnalysisListRead(
+            analyses=[
+                self._build_read(
+                    analysis
+                )
+                for analysis
+                in analyses
+            ]
+        )
+
+    @staticmethod
+    def _extract_pdf_text(
+        file_bytes: bytes,
+    ) -> str:
+        try:
+            reader = PdfReader(
+                BytesIO(
+                    file_bytes
+                )
+            )
+
+            text = "\n".join(
+                (
+                    page.extract_text()
+                    or ""
+                )
+                for page
+                in reader.pages
+            )
+
+        except Exception as exc:
+            raise ValueError(
+                "The PDF could not "
+                "be read."
+            ) from exc
+
+        return text
+
+    @staticmethod
+    def _build_read(
+        analysis: ResumeAnalysis,
+    ) -> ResumeAnalysisRead:
+        return ResumeAnalysisRead(
+            id=analysis.id,
+            original_filename=(
+                analysis
+                .original_filename
+            ),
+            target_role=(
+                analysis.target_role
+            ),
+            overall_score=(
+                analysis
+                .overall_score
+            ),
+            summary=analysis.summary,
+            strengths=(
+                analysis.strengths
+            ),
+            weaknesses=(
+                analysis.weaknesses
+            ),
+            missing_keywords=(
+                analysis
+                .missing_keywords
+            ),
+            suggestions=(
+                analysis.suggestions
+            ),
+            improved_summary=(
+                analysis
+                .improved_summary
+            ),
+            created_at=(
+                analysis.created_at
+            ),
+        )
+
+
+============================================================
+FILE: backend\app\api\routes\resume.py
+============================================================
+
+from typing import Annotated
+
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    UploadFile,
+)
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+)
+
+from app.ai.providers.base import (
+    AIProviderError,
+)
+from app.api.dependencies import (
+    get_current_user,
+)
+from app.db.session import (
+    get_db_session,
+)
+from app.models.user import User
+from app.schemas.resume import (
+    ResumeAnalysisListRead,
+    ResumeAnalysisRead,
+)
+from app.services.resume import (
+    ResumeService,
+)
+
+
+router = APIRouter(
+    prefix="/resume",
+    tags=["Resume"],
+)
+
+
+@router.post(
+    "/analyze",
+    response_model=(
+        ResumeAnalysisRead
+    ),
+)
+async def analyze_resume(
+    file: Annotated[
+        UploadFile,
+        File(),
+    ],
+    user: Annotated[
+        User,
+        Depends(
+            get_current_user,
+        ),
+    ],
+    session: Annotated[
+        AsyncSession,
+        Depends(
+            get_db_session,
+        ),
+    ],
+    target_role: Annotated[
+        str | None,
+        Form(),
+    ] = None,
+) -> ResumeAnalysisRead:
+    file_bytes = await file.read()
+
+    try:
+        return (
+            await ResumeService(
+                session
+            ).analyze(
+                user=user,
+                filename=(
+                    file.filename
+                    or "resume.pdf"
+                ),
+                file_bytes=(
+                    file_bytes
+                ),
+                target_role=(
+                    target_role
+                ),
+            )
+        )
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        ) from exc
+
+    except AIProviderError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=str(exc),
+        ) from exc
+
+
+@router.get(
+    "/analyses",
+    response_model=(
+        ResumeAnalysisListRead
+    ),
+)
+async def list_analyses(
+    user: Annotated[
+        User,
+        Depends(
+            get_current_user,
+        ),
+    ],
+    session: Annotated[
+        AsyncSession,
+        Depends(
+            get_db_session,
+        ),
+    ],
+) -> ResumeAnalysisListRead:
+    return await ResumeService(
+        session
+    ).list_analyses(
+        user
+    )
+
+
+============================================================
+FILE: frontend\src\app\resume\page.tsx
+============================================================
+
+"use client";
+
+import {
+  AlertCircle,
+  CheckCircle2,
+  FileText,
+  Loader2,
+  Sparkles,
+  Target,
+  Trash2,
+  UploadCloud,
+} from "lucide-react";
+import {
+  DragEvent,
+  useRef,
+  useState,
+} from "react";
+
+import { AppBrand } from "@/components/app-brand";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useAuth } from "@/features/auth/auth-provider";
+import { ApiRequestError } from "@/lib/api";
+import type {
+  ResumeAnalysis,
+} from "@/types/resume";
+
+
+const MAX_FILE_SIZE =
+  5 * 1024 * 1024;
+
+
+export default function ResumePage() {
+  const {
+    authFetch,
+  } = useAuth();
+
+  const fileInputRef =
+    useRef<HTMLInputElement | null>(
+      null,
+    );
+
+  const [
+    file,
+    setFile,
+  ] = useState<File | null>(
+    null,
+  );
+
+  const [
+    role,
+    setRole,
+  ] = useState("");
+
+  const [
+    analyzing,
+    setAnalyzing,
+  ] = useState(false);
+
+  const [
+    dragging,
+    setDragging,
+  ] = useState(false);
+
+  const [
+    result,
+    setResult,
+  ] = useState<
+    ResumeAnalysis | null
+  >(null);
+
+  const [
+    error,
+    setError,
+  ] = useState<
+    string | null
+  >(null);
+
+
+  function handleFile(
+    selectedFile: File | null,
+  ) {
+    setError(null);
+
+    if (!selectedFile) {
+      return;
+    }
+
+    if (
+      selectedFile.type !==
+        "application/pdf"
+      && !selectedFile.name
+        .toLowerCase()
+        .endsWith(".pdf")
+    ) {
+      setFile(null);
+
+      setError(
+        "Please select a PDF resume.",
+      );
+
+      return;
+    }
+
+    if (
+      selectedFile.size >
+      MAX_FILE_SIZE
+    ) {
+      setFile(null);
+
+      setError(
+        "Resume PDF must be 5 MB or smaller.",
+      );
+
+      return;
+    }
+
+    setFile(selectedFile);
+    setResult(null);
+  }
+
+
+  function handleFileInput(
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) {
+    const selectedFile =
+      event.target.files?.[0] ??
+      null;
+
+    handleFile(selectedFile);
+  }
+
+
+  function handleDragOver(
+    event: DragEvent<HTMLDivElement>,
+  ) {
+    event.preventDefault();
+    setDragging(true);
+  }
+
+
+  function handleDragLeave(
+    event: DragEvent<HTMLDivElement>,
+  ) {
+    event.preventDefault();
+    setDragging(false);
+  }
+
+
+  function handleDrop(
+    event: DragEvent<HTMLDivElement>,
+  ) {
+    event.preventDefault();
+    setDragging(false);
+
+    const droppedFile =
+      event.dataTransfer.files?.[0] ??
+      null;
+
+    handleFile(droppedFile);
+  }
+
+
+  function removeFile() {
+    setFile(null);
+    setResult(null);
+    setError(null);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value =
+        "";
+    }
+  }
+
+
+  async function analyzeResume() {
+    if (!file) {
+      setError(
+        "Please select your resume PDF first.",
+      );
+
+      return;
+    }
+
+    setAnalyzing(true);
+    setError(null);
+    setResult(null);
+
+    const activityId =
+      crypto.randomUUID();
+
+    let activityStarted = false;
+
+    try {
+      /*
+       * Start preparation tracking.
+       *
+       * If tracking fails, we still continue
+       * with resume analysis. Resume analysis
+       * itself should not be blocked by the
+       * optional time-tracking feature.
+       */
+      try {
+        await authFetch(
+          "/preparation/activities/start",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body:
+              JSON.stringify({
+                module:
+                  "resume",
+                activity_type:
+                  "resume_analysis",
+                source_id:
+                  activityId,
+                planned_duration_seconds:
+                  1800,
+              }),
+          },
+        );
+
+        activityStarted = true;
+      } catch {
+        /*
+         * Do not block resume analysis if
+         * preparation tracking fails.
+         */
+        activityStarted = false;
+      }
+
+
+      /*
+       * Send PDF to backend.
+       */
+      const form =
+        new FormData();
+
+      form.append(
+        "file",
+        file,
+      );
+
+      if (
+        role.trim()
+      ) {
+        form.append(
+          "target_role",
+          role.trim(),
+        );
+      }
+
+
+      /*
+       * Main Resume Analysis request.
+       */
+      const analysis =
+        await authFetch<ResumeAnalysis>(
+          "/resume/analyze",
+          {
+            method: "POST",
+            body: form,
+          },
+        );
+
+      setResult(
+        analysis,
+      );
+
+
+      /*
+       * Finish preparation tracking
+       * only if it successfully started.
+       */
+      if (activityStarted) {
+        try {
+          await authFetch(
+            "/preparation/activities/finish",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+              body:
+                JSON.stringify({
+                  activity_type:
+                    "resume_analysis",
+                  source_id:
+                    activityId,
+                }),
+            },
+          );
+        } catch {
+          /*
+           * Analysis already succeeded.
+           * A tracking failure should not
+           * make the user think analysis failed.
+           */
+        }
+      }
+    } catch (
+      caughtError
+    ) {
+      if (
+        caughtError instanceof
+        ApiRequestError
+      ) {
+        const status =
+          caughtError.status;
+
+        const message =
+          caughtError.message;
+
+        const code =
+          caughtError.code;
+
+        setError(
+          [
+            `Resume analysis failed.`,
+            status
+              ? `HTTP ${status}.`
+              : null,
+            code
+              ? `Code: ${code}.`
+              : null,
+            message || null,
+          ]
+            .filter(Boolean)
+            .join(" "),
+        );
+      } else if (
+        caughtError instanceof
+        Error
+      ) {
+        setError(
+          `Resume analysis failed: ${caughtError.message}`,
+        );
+      } else {
+        setError(
+          "Resume analysis failed due to an unknown error.",
+        );
+      }
+    } finally {
+      setAnalyzing(false);
+    }
+  }
+
+
+  return (
+    <main className="min-h-screen bg-muted/20">
+      <header className="border-b bg-background">
+        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
+          <AppBrand />
+          <ThemeToggle />
+        </div>
+      </header>
+
+
+      <div className="mx-auto max-w-4xl px-4 py-10">
+        {/* Header */}
+        <div className="flex items-start gap-4">
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <FileText className="size-6" />
+          </div>
+
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Resume Analysis
+            </h1>
+
+            <p className="mt-1 text-muted-foreground">
+              Get AI-assisted feedback on your resume
+              for your target placement role.
+            </p>
+          </div>
+        </div>
+
+
+        {/* Upload card */}
+        <Card className="mt-8 overflow-hidden">
+          <CardHeader>
+            <CardTitle>
+              Upload your resume
+            </CardTitle>
+
+            <p className="text-sm text-muted-foreground">
+              Upload a PDF resume up to 5 MB.
+              We&apos;ll extract the text and analyze
+              it against your target role.
+            </p>
+          </CardHeader>
+
+
+          <CardContent className="space-y-6">
+            {/* Hidden native file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/pdf,.pdf"
+              className="hidden"
+              onChange={
+                handleFileInput
+              }
+            />
+
+
+            {/* Drop zone */}
+            {!file ? (
+              <div
+                onDragOver={
+                  handleDragOver
+                }
+                onDragLeave={
+                  handleDragLeave
+                }
+                onDrop={
+                  handleDrop
+                }
+                onClick={() => {
+                  fileInputRef.current?.click();
+                }}
+                className={[
+                  "cursor-pointer rounded-2xl border-2 border-dashed p-8 text-center transition-all",
+                  dragging
+                    ? "border-primary bg-primary/10"
+                    : "border-border hover:border-primary/50 hover:bg-muted/30",
+                ].join(" ")}
+              >
+                <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                  <UploadCloud className="size-7" />
+                </div>
+
+                <h3 className="mt-4 text-base font-semibold">
+                  Drop your resume here
+                </h3>
+
+                <p className="mt-1 text-sm text-muted-foreground">
+                  or click to browse from your computer
+                </p>
+
+                <Badge
+                  variant="secondary"
+                  className="mt-4 rounded-full"
+                >
+                  PDF only · Maximum 5 MB
+                </Badge>
+              </div>
+            ) : (
+              /* Selected file */
+              <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <FileText className="size-6" />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">
+                      {file.name}
+                    </p>
+
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {formatFileSize(
+                        file.size,
+                      )}
+                    </p>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={
+                      removeFile
+                    }
+                    disabled={
+                      analyzing
+                    }
+                    aria-label="Remove resume"
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+
+                <div className="mt-4 flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                  <CheckCircle2 className="size-4" />
+                  Resume selected and ready for analysis.
+                </div>
+              </div>
+            )}
+
+
+            {/* Target role */}
+            <div className="space-y-2">
+              <label
+                htmlFor="target-role"
+                className="text-sm font-medium"
+              >
+                Target role
+                <span className="ml-1 text-muted-foreground">
+                  (optional)
+                </span>
+              </label>
+
+              <div className="relative">
+                <Target className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+
+                <input
+                  id="target-role"
+                  value={role}
+                  onChange={(
+                    event,
+                  ) => {
+                    setRole(
+                      event.target.value,
+                    );
+                  }}
+                  placeholder="e.g. DevOps Engineer"
+                  className="h-11 w-full rounded-xl border bg-background pl-10 pr-4 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  disabled={
+                    analyzing
+                  }
+                />
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Leave this empty to use your primary
+                target role from your Place-Mate profile.
+              </p>
+            </div>
+
+
+            {/* Error */}
+            {error && (
+              <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="mt-0.5 size-5 shrink-0 text-destructive" />
+
+                  <div className="min-w-0">
+                    <p className="font-medium text-destructive">
+                      Analysis failed
+                    </p>
+
+                    <p className="mt-1 text-sm leading-6 text-destructive/90">
+                      {error}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+
+            {/* Analyze button */}
+            <Button
+              type="button"
+              disabled={
+                !file ||
+                analyzing
+              }
+              onClick={() => {
+                void analyzeResume();
+              }}
+              className="w-full rounded-xl sm:w-auto"
+            >
+              {analyzing ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Analyzing resume...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="size-4" />
+                  Analyze resume
+                </>
+              )}
+            </Button>
+
+
+            {analyzing && (
+              <p className="text-xs text-muted-foreground">
+                This may take a little while because
+                the resume is being extracted and analyzed
+                by the AI service.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+
+        {/* Results */}
+        {result && (
+          <div className="mt-8 space-y-5">
+            {/* Overview */}
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Target role
+                    </p>
+
+                    <h2 className="mt-1 text-2xl font-bold">
+                      {result.target_role}
+                    </h2>
+                  </div>
+
+                  <div className="flex size-20 flex-col items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    <span className="text-2xl font-bold">
+                      {result.overall_score}
+                    </span>
+
+                    <span className="text-xs font-medium">
+                      /100
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-6 border-t pt-5">
+                  <p className="leading-7 text-muted-foreground">
+                    {result.summary}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+
+            <ListCard
+              title="Strengths"
+              items={
+                result.strengths
+              }
+            />
+
+
+            <ListCard
+              title="Weaknesses"
+              items={
+                result.weaknesses
+              }
+            />
+
+
+            <ListCard
+              title="Missing keywords"
+              items={
+                result.missing_keywords
+              }
+            />
+
+
+            <ListCard
+              title="Suggested improvements"
+              items={
+                result.suggestions
+              }
+            />
+
+
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  Improved professional summary
+                </CardTitle>
+              </CardHeader>
+
+              <CardContent>
+                <p className="leading-7 text-muted-foreground">
+                  {result.improved_summary}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}
+
+
+function ListCard({
+  title,
+  items,
+}: {
+  title: string;
+  items: string[];
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          {title}
+        </CardTitle>
+      </CardHeader>
+
+      <CardContent>
+        {items.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No items were identified.
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {items.map(
+              (
+                item,
+                index,
+              ) => (
+                <li
+                  key={`${item}-${index}`}
+                  className="flex gap-3"
+                >
+                  <span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" />
+
+                  <span className="leading-6 text-muted-foreground">
+                    {item}
+                  </span>
+                </li>
+              ),
+            )}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+
+function formatFileSize(
+  bytes: number,
+): string {
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+
+  if (bytes < 1024 * 1024) {
+    return `${(
+      bytes / 1024
+    ).toFixed(1)} KB`;
+  }
+
+  return `${(
+    bytes /
+    (1024 * 1024)
+  ).toFixed(2)} MB`;
+}
+
+
+============================================================
+FILE: backend\requirements.txt
+============================================================
+
+fastapi>=0.116,<1.0
+uvicorn[standard]>=0.35,<1.0
+sqlalchemy[asyncio]>=2.0,<3.0
+asyncpg>=0.30,<1.0
+alembic>=1.16,<2.0
+pydantic-settings>=2.10,<3.0
+PyJWT>=2.10,<3.0
+pwdlib[argon2]>=0.3,<1.0
+email-validator>=2.2,<3.0
+httpx>=0.28,<1.0
+pymupdf>=1.26,<2.0
+

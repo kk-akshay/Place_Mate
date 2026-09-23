@@ -1,4 +1,4 @@
-from functools import lru_cache
+﻿from functools import lru_cache
 from typing import Literal
 
 from pydantic_settings import (
@@ -45,6 +45,16 @@ class Settings(BaseSettings):
     database_url: str
 
     frontend_url: str = "http://localhost:3000"
+
+    ai_provider: str = "groq"
+
+    groq_api_key: str = ""
+
+    groq_model: str = "openai/gpt-oss-120b"
+
+    gemini_api_key: str = ""
+
+    gemini_model: str = "gemini-2.5-flash"
 
     model_config = SettingsConfigDict(
         env_file=".env",
