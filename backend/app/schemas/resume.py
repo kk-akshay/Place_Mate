@@ -30,7 +30,7 @@ class ResumeAIResult(
     missing_keywords: list[str] = (
         Field(
             default_factory=list,
-            max_length=20,
+            max_length=30,
         )
     )
 
