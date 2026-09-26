@@ -1,4 +1,5 @@
 ﻿from io import BytesIO
+import logging
 
 from pydantic import (
     ValidationError,
@@ -31,6 +32,9 @@ from app.schemas.resume import (
     ResumeAnalysisListRead,
     ResumeAnalysisRead,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 MAX_RESUME_BYTES = (
@@ -108,8 +112,7 @@ class ResumeService:
             target_role.strip()
             if (
                 target_role
-                and target_role
-                .strip()
+                and target_role.strip()
             )
             else (
                 profile.target_roles[0]
@@ -153,7 +156,15 @@ class ResumeService:
                     raw
                 )
             )
+
         except ValidationError as exc:
+            # Log the exact validation problem
+            # so it can be diagnosed from Render logs.
+            logger.error(
+                "Resume AI validation failed: %s",
+                exc.errors(),
+            )
+
             raise AIProviderError(
                 "The AI service returned a response "
                 "that did not match the expected format."

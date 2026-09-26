@@ -61,7 +61,7 @@ class GroqProvider(AIProvider):
             "response_format": {
                 "type": "json_object",
             },
-            "temperature": 0.3,
+            "temperature": 0.1,
         }
 
         try:
