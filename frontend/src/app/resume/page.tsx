@@ -597,8 +597,31 @@ export default function ResumePage() {
         </Card>
 
 
+        {/* Non-resume warning */}
+        {result && !result.is_resume && (
+          <div className="mt-8">
+            <Card className="border-amber-500/30 bg-amber-500/5">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" />
+
+                  <div className="min-w-0">
+                    <p className="font-medium">
+                      This doesn&apos;t look like a resume
+                    </p>
+
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                      {result.rejection_reason}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* Results */}
-        {result && (
+        {result && result.is_resume && (
           <div className="mt-8 space-y-5">
             {/* Overview */}
             <Card>
