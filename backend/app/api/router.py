@@ -9,6 +9,7 @@ from app.api.routes import (
     health,
     preparation,
     profiles,
+    readiness,
     resume,
     users,
 )
@@ -48,4 +49,8 @@ api_router.include_router(
 
 api_router.include_router(
     resume.router,
+)
+
+api_router.include_router(
+    readiness.router,
 )
