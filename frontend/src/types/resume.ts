@@ -1,7 +1,9 @@
 export type ResumeAnalysis = {
-  id: string;
+  id: string | null;
   original_filename: string;
   target_role: string;
+  is_resume: boolean;
+  rejection_reason: string | null;
   overall_score: number;
   summary: string;
   strengths: string[];
@@ -9,7 +11,7 @@ export type ResumeAnalysis = {
   missing_keywords: string[];
   suggestions: string[];
   improved_summary: string;
-  created_at: string;
+  created_at: string | null;
 };
 
 export type ResumeAnalysisList = {

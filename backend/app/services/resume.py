@@ -170,6 +170,16 @@ class ResumeService:
                 "that did not match the expected format."
             ) from exc
 
+        if not ai_result.is_resume:
+            return self._build_rejection(
+                filename=filename,
+                target_role=resolved_role,
+                detected_document_type=(
+                    ai_result
+                    .detected_document_type
+                ),
+            )
+
         analysis = ResumeAnalysis(
             user_id=user.id,
             original_filename=(
@@ -266,6 +276,42 @@ class ResumeService:
             ) from exc
 
         return text
+
+    @staticmethod
+    def _build_rejection(
+        *,
+        filename: str,
+        target_role: str,
+        detected_document_type: str | None,
+    ) -> ResumeAnalysisRead:
+        description = (
+            detected_document_type
+            or "a different kind of document"
+        )
+
+        return ResumeAnalysisRead(
+            id=None,
+            original_filename=filename,
+            target_role=target_role,
+            is_resume=False,
+            rejection_reason=(
+                "This document does not appear "
+                "to be a resume. It looks like "
+                f"{description} and does not "
+                "contain professional or "
+                "technical information "
+                f"applicable to a {target_role} "
+                "position."
+            ),
+            overall_score=0,
+            summary="",
+            strengths=[],
+            weaknesses=[],
+            missing_keywords=[],
+            suggestions=[],
+            improved_summary="",
+            created_at=None,
+        )
 
     @staticmethod
     def _build_read(
