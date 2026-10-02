@@ -13,6 +13,10 @@ from sqlalchemy.ext.asyncio import (
 from app.api.dependencies import (
     get_current_user,
 )
+from app.core.config import settings
+from app.core.rate_limit import (
+    coding_rate_limiter,
+)
 from app.db.session import (
     get_db_session,
 )
@@ -157,7 +161,13 @@ async def run_code(
         ),
     ],
 ) -> CodingExecutionRead:
-    del user
+    coding_rate_limiter.check(
+        f"run:{user.id}",
+        limit=(
+            settings
+            .coding_run_rate_limit_per_minute
+        ),
+    )
 
     return await CodingService(
         session
@@ -189,6 +199,14 @@ async def submit_code(
         ),
     ],
 ) -> CodingExecutionRead:
+    coding_rate_limiter.check(
+        f"submit:{user.id}",
+        limit=(
+            settings
+            .coding_submit_rate_limit_per_minute
+        ),
+    )
+
     return await CodingService(
         session
     ).submit_code(

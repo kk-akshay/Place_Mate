@@ -56,6 +56,22 @@ class Settings(BaseSettings):
 
     gemini_model: str = "gemini-2.5-flash"
 
+    # "auto" = subprocess runner when ENVIRONMENT=production,
+    # Docker runner otherwise.
+    coding_runner: Literal[
+        "auto",
+        "docker",
+        "subprocess",
+    ] = "auto"
+
+    coding_max_test_cases: int = 20
+
+    coding_subprocess_max_concurrency: int = 2
+
+    coding_run_rate_limit_per_minute: int = 20
+
+    coding_submit_rate_limit_per_minute: int = 10
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

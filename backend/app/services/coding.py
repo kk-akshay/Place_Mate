@@ -5,7 +5,9 @@ from sqlalchemy.ext.asyncio import (
     AsyncSession,
 )
 
+from app.core.config import settings
 from app.core.exceptions import (
+    InvalidRequestError,
     ResourceNotFoundError,
 )
 from app.models.coding import (
@@ -30,8 +32,8 @@ from app.schemas.coding import (
     CodingVisibleTestResult,
 )
 from app.services.coding_runner import (
-    DockerCodingRunner,
     RunnerResult,
+    get_coding_runner,
 )
 
 
@@ -49,7 +51,7 @@ class CodingService:
         )
 
         self.runner = (
-            DockerCodingRunner()
+            get_coding_runner()
         )
 
     async def list_questions(
@@ -253,6 +255,17 @@ class CodingService:
             "submit",
         ],
     ) -> CodingExecutionRead:
+        if (
+            len(test_cases)
+            > settings
+            .coding_max_test_cases
+        ):
+            raise InvalidRequestError(
+                "This question has too "
+                "many test cases to "
+                "execute in one request."
+            )
+
         passed_tests = 0
         hidden_passed = 0
         total_execution_time_ms = 0
