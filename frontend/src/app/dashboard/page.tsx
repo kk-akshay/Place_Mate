@@ -123,10 +123,10 @@ const modules = [
       TrendingUp,
 
     href:
-      null,
+      "/progress",
 
     available:
-      false,
+      true,
   },
 ];
 
@@ -745,7 +745,10 @@ export default function DashboardPage() {
                               module.href
                             }
                           >
-                            Start practice
+                            {module.href
+                            === "/progress"
+                              ? "View progress"
+                              : "Start practice"}
 
                             <ArrowRight className="size-4" />
                           </Link>

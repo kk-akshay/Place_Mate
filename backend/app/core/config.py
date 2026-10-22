@@ -54,7 +54,7 @@ class Settings(BaseSettings):
 
     gemini_api_key: str = ""
 
-    gemini_model: str = "gemini-2.5-flash"
+    gemini_model: str = "gemini-3.8-flash"
 
     # "auto" = subprocess runner when ENVIRONMENT=production,
     # Docker runner otherwise.
