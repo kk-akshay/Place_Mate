@@ -230,3 +230,46 @@ class CodingRepository:
             solved,
             submissions,
         )
+
+    async def get_question_progress_ids(
+        self,
+        user_id: UUID,
+    ) -> tuple[
+        list[UUID],
+        list[UUID],
+    ]:
+        result = (
+            await self.session.execute(
+                select(
+                    CodingSubmission
+                    .question_id,
+                    func.bool_or(
+                        CodingSubmission
+                        .all_passed
+                    ),
+                )
+                .where(
+                    CodingSubmission.user_id
+                    == user_id,
+                )
+                .group_by(
+                    CodingSubmission
+                    .question_id
+                )
+            )
+        )
+
+        rows = result.all()
+
+        attempted = [
+            question_id
+            for question_id, _ in rows
+        ]
+
+        solved = [
+            question_id
+            for question_id, passed in rows
+            if passed
+        ]
+
+        return attempted, solved

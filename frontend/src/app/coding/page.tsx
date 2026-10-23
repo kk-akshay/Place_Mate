@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Braces,
+  CheckCircle2,
   Code2,
   Search,
   Target,
@@ -33,6 +34,7 @@ import {
 import { useAuth } from "@/features/auth/auth-provider";
 import { ApiRequestError } from "@/lib/api";
 import type {
+  CodingProgress,
   CodingQuestionList,
   CodingQuestionSummary,
 } from "@/types/coding";
@@ -56,6 +58,20 @@ export default function CodingPage() {
     setQuestions,
   ] = useState<CodingQuestionSummary[]>(
     [],
+  );
+
+  const [
+    progress,
+    setProgress,
+  ] = useState<CodingProgress | null>(
+    null,
+  );
+
+  const [
+    progressError,
+    setProgressError,
+  ] = useState(
+    false,
   );
 
   const [
@@ -104,14 +120,36 @@ export default function CodingPage() {
           null,
         );
 
+        setProgressError(
+          false,
+        );
+
         try {
-          const result =
-            await authFetch<CodingQuestionList>(
+          const [
+            result,
+            progressResult,
+          ] = await Promise.all([
+            authFetch<CodingQuestionList>(
               "/coding/questions",
-            );
+            ),
+            authFetch<CodingProgress>(
+              "/coding/progress",
+            ).catch(
+              () => null,
+            ),
+          ]);
 
           setQuestions(
             result.questions,
+          );
+
+          setProgress(
+            progressResult,
+          );
+
+          setProgressError(
+            progressResult
+              === null,
           );
         } catch (caughtError) {
           setError(
@@ -261,6 +299,32 @@ export default function CodingPage() {
       ],
     );
 
+  const solvedIds =
+    useMemo(
+      () =>
+        new Set(
+          progress
+            ?.solved_question_ids
+            ?? [],
+        ),
+      [
+        progress,
+      ],
+    );
+
+  const attemptedIds =
+    useMemo(
+      () =>
+        new Set(
+          progress
+            ?.attempted_question_ids
+            ?? [],
+        ),
+      [
+        progress,
+      ],
+    );
+
   const easyCount =
     useMemo(
       () =>
@@ -332,7 +396,7 @@ export default function CodingPage() {
     <main className="min-h-screen bg-muted/20">
       <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur-xl">
         <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
-          <AppBrand />
+          <AppBrand href="/dashboard" />
 
           <div className="flex items-center gap-2">
             <Button
@@ -355,9 +419,9 @@ export default function CodingPage() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-        <section className="overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-violet-500/5 to-cyan-400/10 p-6 sm:p-8 lg:p-10">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+      <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
+        <section className="overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-violet-500/5 to-cyan-400/10 p-4 sm:p-5 lg:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
               <div className="flex items-center gap-2">
                 <div className="flex size-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -369,11 +433,11 @@ export default function CodingPage() {
                 </p>
               </div>
 
-              <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
+              <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
                 Build your placement coding skills
               </h1>
 
-              <p className="mt-3 max-w-2xl leading-7 text-muted-foreground">
+              <p className="mt-1.5 max-w-2xl leading-6 text-muted-foreground">
                 Practice structured Python
                 problems covering common
                 placement coding patterns.
@@ -391,12 +455,42 @@ export default function CodingPage() {
           </div>
         </section>
 
-        <section className="mt-6 grid gap-4 sm:grid-cols-3">
+        <section className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
           <StatsCard
             title="Total problems"
             value={questions.length}
             description="Available coding questions"
             icon={Braces}
+          />
+
+          <StatsCard
+            title="Attempted"
+            value={
+              progress
+                ?.attempted_questions
+              ?? 0
+            }
+            description={
+              progressError
+                ? "Progress unavailable"
+                : "Questions you've tried"
+            }
+            icon={Target}
+          />
+
+          <StatsCard
+            title="Solved"
+            value={
+              progress
+                ?.solved_questions
+              ?? 0
+            }
+            description={
+              progressError
+                ? "Progress unavailable"
+                : "All tests passed"
+            }
+            icon={CheckCircle2}
           />
 
           <StatsCard
@@ -414,9 +508,9 @@ export default function CodingPage() {
           />
         </section>
 
-        <section className="mt-8">
+        <section className="mt-4">
           <Card className="border-border/70">
-            <CardContent className="p-5 sm:p-6">
+            <CardContent className="p-4 sm:p-5">
               <div className="relative">
                 <Search
                   className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
@@ -438,7 +532,7 @@ export default function CodingPage() {
                 />
               </div>
 
-              <div className="mt-5">
+              <div className="mt-3">
                 <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                   Difficulty
                 </p>
@@ -479,7 +573,7 @@ export default function CodingPage() {
                 </div>
               </div>
 
-              <div className="mt-5">
+              <div className="mt-3">
                 <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                   Topic
                 </p>
@@ -537,8 +631,8 @@ export default function CodingPage() {
           </Card>
         </section>
 
-        <section className="mt-8">
-          <div className="mb-5 flex items-end justify-between gap-4">
+        <section className="mt-5">
+          <div className="mb-3 flex items-end justify-between gap-4">
             <div>
               <p className="text-sm font-semibold text-primary">
                 Question bank
@@ -610,6 +704,12 @@ export default function CodingPage() {
                   <QuestionCard
                     key={question.id}
                     question={question}
+                    solved={solvedIds.has(
+                      question.id,
+                    )}
+                    attempted={attemptedIds.has(
+                      question.id,
+                    )}
                   />
                 ),
               )}
@@ -623,8 +723,12 @@ export default function CodingPage() {
 
 function QuestionCard({
   question,
+  solved,
+  attempted,
 }: {
   question: CodingQuestionSummary;
+  solved: boolean;
+  attempted: boolean;
 }) {
   return (
     <Card className="group flex h-full flex-col border-border/70 transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5">
@@ -646,8 +750,25 @@ function QuestionCard({
           </Badge>
         </div>
 
-        <CardTitle className="mt-4 text-lg">
+        <CardTitle className="mt-4 flex items-start justify-between gap-2 text-lg">
           {question.title}
+
+          {solved ? (
+            <Badge className="shrink-0 gap-1 bg-emerald-600 text-white hover:bg-emerald-600">
+              <CheckCircle2
+                className="size-3"
+                aria-hidden="true"
+              />
+              Solved
+            </Badge>
+          ) : attempted ? (
+            <Badge
+              variant="outline"
+              className="shrink-0"
+            >
+              Attempted
+            </Badge>
+          ) : null}
         </CardTitle>
 
         <CardDescription className="leading-6">

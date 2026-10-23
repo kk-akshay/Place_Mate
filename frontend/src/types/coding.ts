@@ -73,4 +73,6 @@ export type CodingProgress = {
   solved_questions: number;
   submissions: number;
   solve_percent: number;
+  attempted_question_ids?: string[];
+  solved_question_ids?: string[];
 };

@@ -199,6 +199,16 @@ class CodingService:
             )
         )
 
+        (
+            attempted_ids,
+            solved_ids,
+        ) = (
+            await self.repository
+            .get_question_progress_ids(
+                user.id
+            )
+        )
+
         solve_percent = (
             round(
                 (
@@ -221,6 +231,12 @@ class CodingService:
             submissions=submissions,
             solve_percent=(
                 solve_percent
+            ),
+            attempted_question_ids=(
+                attempted_ids
+            ),
+            solved_question_ids=(
+                solved_ids
             ),
         )
 

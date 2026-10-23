@@ -164,3 +164,15 @@ class CodingProgressRead(
         ge=0,
         le=100,
     )
+
+    attempted_question_ids: list[
+        UUID
+    ] = Field(
+        default_factory=list,
+    )
+
+    solved_question_ids: list[
+        UUID
+    ] = Field(
+        default_factory=list,
+    )
