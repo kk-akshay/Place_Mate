@@ -641,7 +641,7 @@ export default function AptitudeAttemptPage() {
     <main className="min-h-screen bg-muted/20">
       <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur-xl">
         <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
-          <AppBrand />
+          <AppBrand href="/dashboard" />
 
           <div className="flex items-center gap-2">
             <Badge

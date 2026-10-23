@@ -361,7 +361,7 @@ export default function ResumePage() {
     <main className="min-h-screen bg-muted/20">
       <header className="border-b bg-background">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
-          <AppBrand />
+          <AppBrand href="/dashboard" />
           <ThemeToggle />
         </div>
       </header>

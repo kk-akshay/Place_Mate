@@ -148,7 +148,7 @@ export default function OnboardingPage() {
     <main className="min-h-screen bg-muted/20">
       <header className="border-b border-border/70 bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6">
-          <AppBrand />
+          <AppBrand href="/dashboard" />
 
           <ThemeToggle />
         </div>
