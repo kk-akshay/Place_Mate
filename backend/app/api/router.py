@@ -7,6 +7,7 @@ from app.api.routes import (
     auth,
     coding,
     health,
+    interview,
     preparation,
     profiles,
     readiness,
@@ -53,4 +54,7 @@ api_router.include_router(
 
 api_router.include_router(
     readiness.router,
+)
+api_router.include_router(
+    interview.router,
 )

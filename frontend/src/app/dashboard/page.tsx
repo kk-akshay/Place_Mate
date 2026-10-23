@@ -3,11 +3,12 @@
 import {
   ArrowRight,
   BrainCircuit,
+  ClipboardCheck,
+  ClipboardList,
   Clock3,
   Code2,
   FileText,
   LogOut,
-  MessageSquareText,
   Target,
   TrendingUp,
   UserRound,
@@ -87,16 +88,32 @@ const modules = [
       "Technical Interview",
 
     description:
-      "Practice technical interview questions with AI.",
+      "Answer role-based technical questions in writing and get AI feedback on each answer.",
 
     icon:
-      MessageSquareText,
+      ClipboardList,
 
     href:
-      null,
+      "/interview/technical",
 
     available:
-      false,
+      true,
+  },
+  {
+    title:
+      "HR Interview",
+
+    description:
+      "Practice common HR and behavioural questions in writing and get AI feedback.",
+
+    icon:
+      ClipboardCheck,
+
+    href:
+      "/interview/hr",
+
+    available:
+      true,
   },
   {
   title: "Resume Analysis",
