@@ -1,4 +1,8 @@
-from datetime import datetime, timezone
+from datetime import (
+    datetime,
+    timedelta,
+    timezone,
+)
 from uuid import UUID
 
 from pydantic import ValidationError
@@ -17,6 +21,7 @@ from app.ai.providers.factory import (
     get_ai_provider,
 )
 from app.core.exceptions import (
+    AppException,
     ConflictError,
     InvalidRequestError,
     ResourceNotFoundError,
@@ -43,6 +48,8 @@ from app.schemas.interview import (
     SubmitInterviewRequest,
 )
 
+MAX_ROUNDS_PER_HOUR = 10
+
 
 class InterviewService:
     def __init__(
@@ -64,6 +71,34 @@ class InterviewService:
         user: User,
         payload: StartInterviewRequest,
     ) -> InterviewSessionRead:
+        recent_rounds = (
+            await self.repository
+            .count_sessions_since(
+                user_id=user.id,
+                since=(
+                    datetime.now(
+                        timezone.utc,
+                    )
+                    - timedelta(hours=1)
+                ),
+            )
+        )
+
+        if (
+            recent_rounds
+            >= MAX_ROUNDS_PER_HOUR
+        ):
+            raise AppException(
+                code="INTERVIEW_RATE_LIMITED",
+                message=(
+                    "You have started the maximum "
+                    "number of practice rounds for "
+                    "this hour. Please try again "
+                    "a little later."
+                ),
+                status_code=429,
+            )
+
         profile = (
             await self.profile_repository
             .get_by_user_id(user.id)

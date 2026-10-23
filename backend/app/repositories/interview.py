@@ -1,6 +1,10 @@
+from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import (
+    func,
+    select,
+)
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
 )
@@ -27,6 +31,29 @@ class InterviewRepository:
         )
 
         await self.session.flush()
+
+    async def count_sessions_since(
+        self,
+        *,
+        user_id: UUID,
+        since: datetime,
+    ) -> int:
+        result = await self.session.execute(
+            select(
+                func.count(
+                    InterviewSession.id,
+                ),
+            ).where(
+                InterviewSession.user_id
+                == user_id,
+                InterviewSession.created_at
+                >= since,
+            )
+        )
+
+        return int(
+            result.scalar_one(),
+        )
 
     async def get_session(
         self,
